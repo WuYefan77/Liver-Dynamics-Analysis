@@ -14,3 +14,17 @@ Calibrating complex matrices on sparse, interval-censored longitudinal data carr
 
 ### 3. Time-Inhomogeneous Dynamics (`RK45`)
 When introducing time-varying covariates (e.g., dynamic weight trajectories), the generator matrix becomes a function of time $\mathbf{Q}(t)$. Because matrices at different time steps do not commute ($[\mathbf{Q}(t_1), \mathbf{Q}(t_2)] \neq 0$), the analytical solution breaks down. Module 3 solves this by dynamically rebuilding the rate matrix and integrating the non-autonomous system using **Runge-Kutta 4(5)**, allowing for counterfactual simulations of lifestyle interventions.
+
+## Visualizing the Engine
+
+### 1. The Likelihood Extractor (Time-Homogeneous)
+By evaluating $\exp(Q\Delta t)$, we generate the exact probability landscape for irregularly sampled data, guaranteeing zero numerical drift during the MLE optimization.
+![Propagator Matrix](images/likelihood_bridge.png)
+
+### 2. Population Flux Dynamics
+Using BIC-validated parameters, the system predicts the conditional long-term trajectories of patients, revealing intermediate stages as highly volatile pivot points.
+![Trajectories](images/model_trajectories.png)
+
+### 3. Counterfactual Simulation (Time-Inhomogeneous)
+For dynamic covariates where $[Q(t_1), Q(t_2)] \neq 0$, the RK45 numerical integrator allows us to simulate A/B testing scenarios, such as the delayed benefits of lifestyle interventions.
+![Intervention](images/time_varying_intervention.png)

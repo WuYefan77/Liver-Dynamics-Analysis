@@ -1,30 +1,98 @@
-# Continuous-Time Markov-ODE Engine for Disease Dynamics
+# Continuous-Time Markov–ODE Models for Liver Disease Dynamics
 
-This repository contains the mathematical infrastructure I developed during my research at the **University of Sydney (School of Mathematics and Statistics)**. 
+This repository contains the Python implementation of continuous-time compartmental models developed during a formal research project at the **University of Sydney School of Mathematics and Statistics**. The project studies metabolic liver disease progression using confidential longitudinal clinical data provided through **Royal Prince Alfred Hospital**.
 
-The project models the progression of metabolic liver disease using a deterministic compartmental framework. Rather than utilizing pure black-box machine learning, this engine emphasizes **physical interpretability, mass conservation, and rigorous statistical model selection**.
+The fitted results and figures shown below were obtained from the clinical study. Patient-level records are subject to confidentiality requirements and cannot be released publicly.
 
-## Architecture & Modules
+The modelling framework combines interpretable disease-state transitions, mass-conserving dynamics, likelihood-based calibration and time-varying numerical integration.
 
-### 1. The Analytical Propagator (`expm`)
-For time-homogeneous systems, numerical integration (e.g., Euler, RK4) introduces unnecessary stepping errors. Module 1 utilizes the **Matrix Exponential** to obtain exact analytical solutions ( $F(t) = e^{Qt}F(0)$ ), dramatically increasing computational efficiency during likelihood optimization.
+## Core components
 
-### 2. Information Criteria & Calibration (AIC/BIC)
-Calibrating complex matrices on sparse, interval-censored longitudinal data carries a high risk of overfitting. Module 2 implements a Maximum Likelihood Estimation (MLE) pipeline that actively penalizes model complexity using **Bayesian Information Criterion (BIC)**, ensuring the selected parameters generalize robustly.
+### Matrix-exponential propagator
 
-### 3. Time-Inhomogeneous Dynamics (`RK45`)
-When introducing time-varying covariates (e.g., dynamic weight trajectories), the generator matrix becomes a function of time $\mathbf{Q}(t)$. Because matrices at different time steps do not commute ($[\mathbf{Q}(t_1), \mathbf{Q}(t_2)] \neq 0$), the analytical solution breaks down. Module 3 solves this by dynamically rebuilding the rate matrix and integrating the non-autonomous system using **Runge-Kutta 4(5)**, allowing for counterfactual simulations of lifestyle interventions.
+For a time-homogeneous generator matrix $Q$, the transition operator is
 
-## Visualizing the Engine
+$$
+P(\Delta t)=\exp(Q\Delta t).
+$$
 
-### 1. The Likelihood Extractor (Time-Homogeneous)
-By evaluating $\exp(Q\Delta t)$, we generate the exact probability landscape for irregularly sampled data, guaranteeing zero numerical drift during the MLE optimization.
-![Propagator Matrix](images/likelihood_bridge.png)
+`AnalyticalFluxEngine` constructs a nearest-neighbour, mass-conserving generator and evaluates this operator with `scipy.linalg.expm`. This avoids introducing an additional time-stepping discretisation inside likelihood evaluation.
 
-### 2. Population Flux Dynamics
-Using BIC-validated parameters, the system predicts the conditional long-term trajectories of patients, revealing intermediate stages as highly volatile pivot points.
-![Trajectories](images/model_trajectories.png)
+### Maximum-likelihood calibration and model selection
 
-### 3. Counterfactual Simulation (Time-Inhomogeneous)
-For dynamic covariates where $[Q(t_1), Q(t_2)] \neq 0$, the RK45 numerical integrator allows us to simulate A/B testing scenarios, such as the delayed benefits of lifestyle interventions.
-![Intervention](images/time_varying_intervention.png)
+`ModelCalibrator` evaluates transition likelihoods from irregular longitudinal observations, estimates non-negative progression and regression rates, and computes Akaike and Bayesian information criteria for model comparison.
+
+### Time-inhomogeneous dynamics
+
+`DynamicFluxEngine` allows transition rates to depend on a time-varying covariate. When $Q(t)$ changes over time and generators at different times do not commute, the package integrates
+
+$$
+\frac{dF}{dt}=Q(t)F(t)
+$$
+
+with the adaptive RK45 method.
+
+## Installation
+
+```bash
+git clone https://github.com/WuYefan77/Liver-Dynamics-Analysis.git
+cd Liver-Dynamics-Analysis
+python -m pip install -e .
+```
+
+## Python API
+
+```python
+from liver_dynamics import (
+    AnalyticalFluxEngine,
+    DynamicFluxEngine,
+    ModelCalibrator,
+)
+
+# Time-homogeneous transition operator using fitted rates.
+engine = AnalyticalFluxEngine(n_states=5)
+Q = engine.build_generator_matrix(
+    k_fwd=fitted_rates["forward"],
+    k_bck=fitted_rates["backward"],
+)
+P = engine.transition_matrix(Q, dt=follow_up_interval)
+
+# Likelihood calibration from an authorised clinical transition table.
+calibrator = ModelCalibrator(clinical_transitions, n_states=5)
+fit = calibrator.fit(initial_params=(0.1, 0.1))
+aic, bic = calibrator.calculate_ic(
+    nll=fit.fun,
+    k=len(fit.x),
+    n=len(clinical_transitions),
+)
+```
+
+The expected calibration columns are `start_stage`, `end_stage` and `dt`. The package uses the column-vector convention $dF/dt=QF$, so generator columns sum to zero and $P_{ij}$ is the probability of ending in state $i$ from starting state $j$.
+
+## Results
+
+### Transition likelihoods
+
+The matrix-exponential propagator maps an observed baseline stage and follow-up interval to the corresponding transition likelihood.
+
+![Propagator matrix](images/likelihood_bridge.png)
+
+### Fitted disease trajectories
+
+Parameters calibrated on the confidential clinical cohort produce conditional disease-state probability trajectories across follow-up time.
+
+![Fitted disease trajectories](images/model_trajectories.png)
+
+### Time-varying covariate simulation
+
+The time-inhomogeneous solver supports model-based counterfactual simulations under dynamic covariate trajectories.
+
+![Time-varying covariate simulation](images/time_varying_intervention.png)
+
+## Research context
+
+This work was conducted at the University of Sydney under the supervision of **Professor Peter Kim** and **Dr Joachim Worthington**, using confidential clinical data provided through Royal Prince Alfred Hospital.
+
+## License
+
+The source code is released under the [MIT License](LICENSE). The clinical dataset is not covered by this repository or its software license.

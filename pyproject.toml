@@ -1,0 +1,23 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "liver-dynamics"
+version = "0.1.0"
+description = "Continuous-time compartmental models for liver disease dynamics"
+readme = "README.md"
+requires-python = ">=3.10"
+license = "MIT"
+authors = [{ name = "Yefan Wu" }]
+dependencies = [
+    "numpy>=1.24",
+    "pandas>=2.0",
+    "scipy>=1.10",
+]
+
+[project.optional-dependencies]
+plotting = ["matplotlib>=3.7"]
+
+[tool.setuptools.packages.find]
+include = ["liver_dynamics*"]

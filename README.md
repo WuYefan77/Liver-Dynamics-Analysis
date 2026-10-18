@@ -69,6 +69,12 @@ aic, bic = calibrator.calculate_ic(
 
 The expected calibration columns are `start_stage`, `end_stage` and `dt`. The package uses the column-vector convention $dF/dt=QF$, so generator columns sum to zero and $P_{ij}$ is the probability of ending in state $i$ from starting state $j$.
 
+## Synthetic numerical checks
+
+Unit tests use wholly synthetic state-transition observations. They test probability conservation and consistency of constant-rate RK45 and matrix-exponential solutions without accessing or disclosing clinical records.
+
+Run `python -m pip install -e ".[test]"` and `python -m pytest -q`.
+
 ## Results
 
 ### Transition likelihoods

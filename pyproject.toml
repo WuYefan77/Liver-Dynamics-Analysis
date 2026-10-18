@@ -18,6 +18,7 @@ dependencies = [
 
 [project.optional-dependencies]
 plotting = ["matplotlib>=3.7"]
+test = ["pytest>=8.0"]
 
 [tool.setuptools.packages.find]
 include = ["liver_dynamics*"]
